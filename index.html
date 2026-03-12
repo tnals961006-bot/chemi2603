@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>화학 기초 탈출 게임</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* 모바일 브라우저 주소창을 고려한 높이 설정 */
+            height: 100vh;
+            height: 100dvh; 
+            overscroll-behavior: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.3s ease;
+        }
+        
+        .flash-correct { background-color: #c8e6c9 !important; }
+        .flash-wrong { background-color: #ffcdd2 !important; }
+
+        #game-container {
+            background: white;
+            /* 모바일 화면에 거의 꽉 차도록 너비와 패딩 조정 */
+            width: 95%;
+            max-width: 450px;
+            padding: 30px 20px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            position: relative;
+        }
+        h1 { color: var(--secondary-color); font-size: 28px; margin-top: 0; margin-bottom: 15px; word-break: keep-all; }
+        p { font-size: 17px; line-height: 1.5; word-break: keep-all; margin: 10px 0; }
+        .hidden { display: none !important; }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 18px 20px; /* 터치 영역 확대 */
+            margin: 10px 0;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            width: 100%;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn:active {
+            transform: scale(0.96);
+            background-color: #1976D2;
+        }
+        .option-btn {
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 8px 0;
+            font-size: 22px; /* 보기 글씨 크기 확대 */
+            padding: 16px 20px;
+        }
+        .option-btn:active { background-color: #d5d5d5; }
+
+        #lives-display {
+            font-size: 26px;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+        }
+
+        #timer-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+        #timer-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 100%;
+            transition: width 1s linear;
+        }
+        #question-text {
+            font-size: 26px;
+            font-weight: 900;
+            margin: 30px 0;
+            word-break: keep-all;
+            line-height: 1.4;
+        }
+        .stage-title { color: #888; font-size: 16px; margin-bottom: 5px; font-weight: bold;}
+
+        #result-screen {
+            border: 4px solid var(--primary-color);
+            background-color: #e8f5e9;
+        }
+        .pass-stamp {
+            font-size: 45px;
+            color: #d32f2f;
+            font-weight: 900;
+            border: 6px solid #d32f2f;
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 15px;
+            transform: rotate(-10deg);
+            margin: 35px 0;
+        }
+        #feedback-text {
+            font-size: 20px;
+            color: #d32f2f;
+            font-weight: bold;
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            word-break: keep-all;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="start-screen">
+        <h1>🧪 화학 탈출 게임</h1>
+        <p>본격적인 진도를 나가기 전,<br>필수 기초를 5분 동안 복습하자!</p>
+        <p>❤️ <b>목숨 3개</b>가 주어집니다.</p>
+        <p>모든 스테이지를 통과하고 <strong>마지막 인증 화면</strong>을 선생님께 보여주세요.</p>
+        <button class="btn" onclick="startGame()">게임 시작하기</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="lives-display">❤️❤️❤️</div>
+        <div id="timer-bar"><div id="timer-fill"></div></div>
+        <div class="stage-title" id="stage-indicator">스테이지 1</div>
+        <div id="question-text">문제 로딩중...</div>
+        <div id="options-container"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <h1 style="color: var(--primary-color);">🎉 MISSION CLEAR</h1>
+        <div class="pass-stamp">검사 완료</div>
+        <p>훌륭합니다! 5분 완주 성공!</p>
+        <p>남은 목숨: <span id="final-lives"></span>개</p>
+        <p>소요 시간: <span id="final-time"></span>초</p>
+        <p style="color: #d32f2f; font-weight: bold; font-size: 18px; margin-top: 20px;">이 화면을 선생님께 보여주세요!</p>
+        <button class="btn" style="background-color: var(--primary-color); margin-top: 15px;" onclick="location.reload()">처음부터 다시</button>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+        <h1 style="color: #d32f2f; margin-bottom: 20px;">😢 GAME OVER</h1>
+        <p id="game-over-reason" style="font-size: 18px;">제한 시간이 다 되었거나<br>목숨을 모두 잃었습니다.</p>
+        <div id="feedback-text" class="hidden"></div>
+        <p style="margin-top: 25px; font-size: 18px;">다시 도전해서 개념을 확실히 익혀보세요!</p>
+        <button class="btn" style="background-color: #d32f2f; margin-top: 15px;" onclick="location.reload()">다시 도전하기</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // 1단계: 원소 기호
+        { stage: 1, title: "1단계: 원소 기호", q: "'수소'의 원소 기호는?", options: ["H", "He", "O", "C"], answer: "H" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'탄소'의 원소 기호는?", options: ["C", "Ca", "Cu", "Cl"], answer: "C" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'질소'의 원소 기호는?", options: ["N", "Na", "Ne", "Ni"], answer: "N" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'산소'의 원소 기호는?", options: ["O", "S", "C", "P"], answer: "O" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'마그네슘'의 원소 기호는?", options: ["Mg", "Mn", "Mo", "Ma"], answer: "Mg" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'칼륨'의 원소 기호는?", options: ["K", "Ca", "Kr", "P"], answer: "K" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'철'의 원소 기호는?", options: ["Fe", "F", "Fl", "I"], answer: "Fe" },
+        { stage: 1, title: "1단계: 원소 기호", q: "'구리'의 원소 기호는?", options: ["Cu", "C", "Co", "Cr"], answer: "Cu" },
+
+        // 2단계: 이온식
+        { stage: 2, title: "2단계: 이온식", q: "'나트륨 이온'의 표현은?", options: ["Na<sup>+</sup>", "Na<sup>2+</sup>", "Na<sup>-</sup>", "N<sup>+</sup>"], answer: "Na<sup>+</sup>" },
+        { stage: 2, title: "2단계: 이온식", q: "'칼슘 이온'의 표현은?", options: ["Ca<sup>2+</sup>", "Ca<sup>+</sup>", "K<sup>+</sup>", "C<sup>2+</sup>"], answer: "Ca<sup>2+</sup>" },
+        { stage: 2, title: "2단계: 이온식", q: "'염화 이온'의 표현은?", options: ["Cl<sup>-</sup>", "Cl<sup>+</sup>", "C<sup>-</sup>", "Cl<sup>2-</sup>"], answer: "Cl<sup>-</sup>" },
+        { stage: 2, title: "2단계: 이온식", q: "'산화 이온'의 표현은?", options: ["O<sup>2-</sup>", "O<sup>-</sup>", "O<sup>2+</sup>", "S<sup>2-</sup>"], answer: "O<sup>2-</sup>" },
+        { stage: 2, title: "2단계: 이온식", q: "'수산화 이온'의 다원자 이온식은?", options: ["OH<sup>-</sup>", "NO<sub>3</sub><sup>-</sup>", "CO<sub>3</sub><sup>2-</sup>", "NH<sub>4</sub><sup>+</sup>"], answer: "OH<sup>-</sup>" },
+        { stage: 2, title: "2단계: 이온식", q: "'탄산 이온'의 다원자 이온식은?", options: ["CO<sub>3</sub><sup>2-</sup>", "CO<sub>2</sub>", "SO<sub>4</sub><sup>2-</sup>", "C<sup>4-</sup>"], answer: "CO<sub>3</sub><sup>2-</sup>" },
+        { stage: 2, title: "2단계: 이온식", q: "'황산 이온'의 다원자 이온식은?", options: ["SO<sub>4</sub><sup>2-</sup>", "S<sup>2-</sup>", "SO<sub>3</sub><sup>2-</sup>", "H<sub>2</sub>SO<sub>4</sub>"], answer: "SO<sub>4</sub><sup>2-</sup>" },
+
+        // 3단계: 분자식 및 화학식 (염화 칼슘, 산화 마그네슘으로 교체됨)
+        { stage: 3, title: "3단계: 분자식 및 화학식", q: "'물'의 분자식은?", options: ["H<sub>2</sub>O", "H<sub>2</sub>", "O<sub>2</sub>", "H<sub>2</sub>O<sub>2</sub>"], answer: "H<sub>2</sub>O" },
+        { stage: 3, title: "3단계: 분자식 및 화학식", q: "'이산화 탄소'의 분자식은?", options: ["CO<sub>2</sub>", "CO", "CH<sub>4</sub>", "O<sub>2</sub>"], answer: "CO<sub>2</sub>" },
+        { stage: 3, title: "3단계: 분자식 및 화학식", q: "'암모니아'의 분자식은?", options: ["NH<sub>3</sub>", "N<sub>2</sub>", "NO<sub>2</sub>", "NH<sub>4</sub><sup>+</sup>"], answer: "NH<sub>3</sub>" },
+        { stage: 3, title: "3단계: 분자식 및 화학식", q: "'염화 나트륨'의 화학식은?", options: ["NaCl", "Na<sub>2</sub>Cl", "NaCl<sub>2</sub>", "CaC<sub>2</sub>"], answer: "NaCl" },
+        { stage: 3, title: "3단계: 분자식 및 화학식", q: "'염화 칼슘'의 화학식은?", options: ["CaCl<sub>2</sub>", "CaCl", "Ca<sub>2</sub>Cl", "CaC<sub>2</sub>"], answer: "CaCl<sub>2</sub>" },
+        { stage: 3, title: "3단계: 분자식 및 화학식", q: "'산화 마그네슘'의 화학식은?", options: ["MgO", "Mg<sub>2</sub>O", "MgO<sub>2</sub>", "MnO"], answer: "MgO" },
+
+        // 4단계: 암모니아 분자/원자 개수 문제
+        { stage: 4, title: "4단계: 분자와 원자 개수", q: "암모니아(NH<sub>3</sub>) 분자 1개에 들어있는 총 원자의 개수는?", options: ["1개", "2개", "3개", "4개"], answer: "4개" },
+        { stage: 4, title: "4단계: 분자와 원자 개수", q: "<b>2NH<sub>3</sub></b> 에서 암모니아 분자는 총 몇 개인가요?", options: ["1개", "2개", "3개", "6개"], answer: "2개" },
+        { stage: 4, title: "4단계: 분자와 원자 개수", q: "<b>2NH<sub>3</sub></b> 에 포함된 질소(N) 원자의 총 개수는?", options: ["1개", "2개", "3개", "4개"], answer: "2개" },
+        { stage: 4, title: "4단계: 분자와 원자 개수", q: "<b>2NH<sub>3</sub></b> 에 포함된 수소(H) 원자의 총 개수는?", options: ["2개", "3개", "5개", "6개"], answer: "6개" }
+    ];
+
+    let currentQuestionIndex = 0;
+    let totalTime = 300; 
+    let timeLeft = totalTime;
+    let timerInterval;
+    let lives = 3; 
+    let isClicking = false; 
+
+    function updateLivesDisplay() {
+        const livesStr = '❤️'.repeat(lives) + '💔'.repeat(3 - lives);
+        document.getElementById('lives-display').innerText = livesStr;
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        currentQuestionIndex = 0;
+        timeLeft = totalTime;
+        lives = 3;
+        isClicking = false;
+        
+        updateLivesDisplay();
+        timerInterval = setInterval(updateTimer, 1000);
+        showQuestion();
+    }
+
+    function updateTimer() {
+        timeLeft--;
+        const fillPercentage = (timeLeft / totalTime) * 100;
+        document.getElementById('timer-fill').style.width = fillPercentage + '%';
+
+        if (fillPercentage < 20) {
+            document.getElementById('timer-fill').style.backgroundColor = '#d32f2f';
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            gameOver("시간 초과!");
+        }
+    }
+
+    function showQuestion() {
+        if (currentQuestionIndex >= questions.length) {
+            gameClear();
+            return;
+        }
+
+        const qData = questions[currentQuestionIndex];
+        document.getElementById('stage-indicator').innerText = qData.title;
+        document.getElementById('question-text').innerHTML = qData.q;
+
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+
+        let shuffledOptions = [...qData.options].sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn option-btn';
+            btn.innerHTML = opt;
+            btn.onclick = () => {
+                if(isClicking) return;
+                isClicking = true;
+                checkAnswer(opt, qData.answer);
+            };
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected, correct) {
+        const body = document.body;
+
+        if (selected === correct) {
+            body.classList.add('flash-correct');
+            setTimeout(() => {
+                body.classList.remove('flash-correct');
+                currentQuestionIndex++;
+                isClicking = false;
+                showQuestion();
+            }, 300); 
+        } else {
+            body.classList.add('flash-wrong');
+            lives--;
+            updateLivesDisplay();
+            
+            setTimeout(() => {
+                body.classList.remove('flash-wrong');
+                isClicking = false;
+                
+                if (lives <= 0) {
+                    clearInterval(timerInterval);
+                    gameOver(`아쉽습니다!<br>방금 문제의 정답은<br><b>[ ${correct} ]</b> 였습니다.`);
+                }
+            }, 300);
+        }
+    }
+
+    function gameOver(reason) {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.remove('hidden');
+        
+        if(reason && reason !== "시간 초과!") {
+            document.getElementById('game-over-reason').innerHTML = "목숨을 모두 잃었습니다.";
+            const feedbackEl = document.getElementById('feedback-text');
+            feedbackEl.innerHTML = reason;
+            feedbackEl.classList.remove('hidden');
+        } else {
+            document.getElementById('game-over-reason').innerHTML = "제한 시간이 다 되었습니다.";
+            document.getElementById('feedback-text').classList.add('hidden');
+        }
+    }
+
+    function gameClear() {
+        clearInterval(timerInterval);
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        
+        document.getElementById('final-lives').innerText = lives;
+        document.getElementById('final-time').innerText = totalTime - timeLeft;
+    }
+</script>
+
+</body>
+</html>
